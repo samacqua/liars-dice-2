@@ -60,7 +60,7 @@ if checkpoint is not None:
     model.load_state_dict(checkpoint["model_state_dict"])
 
 
-device = torch.device("cuda")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model.to(device)
 
 
