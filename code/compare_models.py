@@ -53,7 +53,7 @@ def load_models(paths):
             # assert train_args.sides == args.sides
             # assert train_args.variant == args.variant
             D_PUB, D_PRI, *_ = calc_args(
-                train_args.d1, train_args.d2, train_args.sides, train_args.variant
+                [train_args.d1, train_args.d2], train_args.sides, train_args.variant
             )
             model = NetCompBilin(D_PRI, D_PUB)
             model.load_state_dict(checkpoint["model_state_dict"])
@@ -76,13 +76,13 @@ def run_game(game1, game2):
             players = [Robot(priv1, games[0]), Robot(priv2, games[1])]
         else:
             players = [Robot(priv1, games[1]), Robot(priv2, games[0])]
-        state = game.make_state()
+        state = game.make_init_state()
         cur = 0
         while True:
             action = players[cur].get_action(state)
             if action == game.LIE_ACTION:
                 last_call = game.get_last_call(state)
-                res = game.evaluate_call(r1, r2, last_call)
+                res = game.evaluate_call([r1, r2], last_call)
                 winner = 1 - cur if res else cur
                 if not flip:
                     scores[winner] += 1
@@ -95,9 +95,10 @@ def run_game(game1, game2):
 
 
 def main():
+
     parser = argparse.ArgumentParser()
     parser.add_argument("paths", type=str, nargs="+", help="Path of models")
-    parser.add_argument("--d", type=int, nargs=2, help="Number of dice for players")
+    parser.add_argument("--d", type=int, nargs="+", help="Number of dice for players")
     parser.add_argument(
         "--sides", type=int, default=6, help="Number of sides on the dice"
     )

@@ -22,11 +22,11 @@ checkpoint = torch.load(args.path, map_location=torch.device("cpu"))
 train_args = checkpoint["args"]
 
 D_PUB, D_PRI, *_ = calc_args(
-    train_args.d1, train_args.d2, train_args.sides, train_args.variant
+    [train_args.d1, train_args.d2], train_args.sides, train_args.variant
 )
 model = NetCompBilin(D_PRI, D_PUB)
 model.load_state_dict(checkpoint["model_state_dict"])
-game = Game(model, train_args.d1, train_args.d2, train_args.sides, train_args.variant)
+game = Game(model, [train_args.d1, train_args.d2], train_args.sides, train_args.variant)
 
 
 class Human:
@@ -82,7 +82,7 @@ while True:
     r1 = random.choice(list(game.rolls(0)))
     r2 = random.choice(list(game.rolls(1)))
     privs = [game.make_priv(r1, 0), game.make_priv(r2, 1)]
-    state = game.make_state()
+    state = game.make_init_state()
 
     if ans == "y":
         print(f"> You rolled {r1}!")
@@ -101,7 +101,7 @@ while True:
 
         if action == game.LIE_ACTION:
             last_call = game.get_last_call(state)
-            res = game.evaluate_call(r1, r2, last_call)
+            res = game.evaluate_call([r1, r2], last_call)
             print()
             print(f"> The rolls were {r1} and {r2}.")
             if res:

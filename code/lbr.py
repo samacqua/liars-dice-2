@@ -69,7 +69,7 @@ def lbr(game, roll, us, prune=0, prune_type="zero"):
             # Take the average outcome over our opponents possible rolls
             for prob, op_roll in zip(reach_probs, op_rolls):
                 r1, r2 = (roll, op_roll) if us == 0 else (op_roll, roll)
-                correct = game.evaluate_call(r1, r2, prev_call)
+                correct = game.evaluate_call([r1, r2], prev_call)
                 # If prev_call is good, and we are now, it mean we won
                 # (because we made the all and our opponent called lie)
                 if us == cur:
@@ -117,7 +117,7 @@ def lbr(game, roll, us, prune=0, prune_type="zero"):
                 score += pa * val
             return score
 
-    return inner(game.make_state(), reach_probs, 1)
+    return inner(game.make_init_state(), reach_probs, 1)
 
 
 def main():
@@ -139,12 +139,12 @@ def main():
     train_args = checkpoint["args"]
 
     D_PUB, D_PRI, *_ = calc_args(
-        train_args.d1, train_args.d2, train_args.sides, train_args.variant
+        [train_args.d1, train_args.d2], train_args.sides, train_args.variant
     )
     model = Net(D_PRI, D_PUB)
     model.load_state_dict(checkpoint["model_state_dict"])
     game = Game(
-        model, train_args.d1, train_args.d2, train_args.sides, train_args.variant
+        model, [train_args.d1, train_args.d2], train_args.sides, train_args.variant
     )
 
     for player in range(2):

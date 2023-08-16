@@ -19,7 +19,7 @@ def main():
         cpargs = checkpoint["args"]
 
         # Model : (private state, public state) -> value
-        D_PUB, D_PRI, *_ = calc_args(cpargs.d1, cpargs.d2, cpargs.sides, cpargs.variant)
+        D_PUB, D_PRI, *_ = calc_args([cpargs.d1, cpargs.d2], cpargs.sides, cpargs.variant)
         # model = Net(D_PRI, D_PUB)
         model = NetCompBilin(D_PRI, D_PUB)
         model.load_state_dict(checkpoint["model_state_dict"])
