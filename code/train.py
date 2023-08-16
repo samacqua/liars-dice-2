@@ -34,6 +34,8 @@ parser.add_argument(
     "--path", type=str, default="model.pt", help="Where to save checkpoints"
 )
 
+parser.add_argument("--N", type=int, default=10_000_000, help="Number of games to simulate / train for.")
+
 args = parser.parse_args()
 
 
@@ -171,15 +173,20 @@ def train():
     scheduler = ReciLR(optimizer, gamma=0.5)
     value_loss = torch.nn.MSELoss()
     all_rolls = list(itertools.product(*[game.rolls(i) for i, n_dice in enumerate(args.d)]))
-    for t in range(100_000):
+
+    n_games_per_iter = 100
+    n_iters = args.N // n_games_per_iter
+
+    for t in range(n_iters):
         replay_buffer = []
 
-        BS = 100  # Number of rolls to include
+        # Play games from a random sample of the possible starting rolls.
         for rolls in (
-            all_rolls if len(all_rolls) <= BS else random.sample(all_rolls, BS)
+            all_rolls if len(all_rolls) <= n_games_per_iter else random.sample(all_rolls, n_games_per_iter)
         ):
             play(rolls, replay_buffer)
 
+        # Train on the replay buffer.
         random.shuffle(replay_buffer)
         privs, states, y = zip(*replay_buffer)
 
@@ -189,10 +196,11 @@ def train():
 
         y_pred = model(privs, states)
 
-        # Compute and print loss
+        # Compute and print loss.
         loss = value_loss(y_pred, y)
         print(t, loss.item())
 
+        # Print the starting move strategy every 5 iterations.
         if t % 5 == 0:
             with torch.no_grad():
                 print_strategy(game.make_init_state().to(device))
@@ -203,6 +211,7 @@ def train():
         optimizer.step()
         scheduler.step()
 
+        # Save the model every 10 iterations.
         if args.path and (t + 1) % 10 == 0:
             print(f"Saving to {args.path}")
             torch.save(
@@ -214,6 +223,8 @@ def train():
                 },
                 args.path,
             )
+
+        # Save the model checkpoint every 1000 iterations.
         if args.path and (t + 1) % 1000 == 0:
             torch.save(
                 {
