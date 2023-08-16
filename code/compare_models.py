@@ -52,10 +52,11 @@ def load_models(paths):
             # assert train_args.d2 == args.d[1]
             # assert train_args.sides == args.sides
             # assert train_args.variant == args.variant
+
             D_PUB, D_PRI, *_ = calc_args(
-                [train_args.d1, train_args.d2], train_args.sides, train_args.variant
+                train_args.d, train_args.sides, train_args.variant
             )
-            model = NetCompBilin(D_PRI, D_PUB)
+            model = NetConcat(D_PRI, D_PUB)
             model.load_state_dict(checkpoint["model_state_dict"])
         models.append(model)
     return models
@@ -110,7 +111,7 @@ def main():
 
     models = load_models(args.paths)
     games = [
-        Game(model, args.d[0], args.d[1], args.sides, args.variant) for model in models
+        Game(model, args.d, args.sides, args.variant) for model in models
     ]
     N = args.N
 
@@ -137,7 +138,8 @@ def main():
         elo_upper = 400 * math.log10(1 / (p1 - std) - 1)
         elo_lower = 400 * math.log10(1 / (p1 + std) - 1)
         print(
-            f"{args.paths[0]} is about {mean_elo:.1f} stronger than {args.paths[1]} (between {elo_lower:.1f} and {elo_upper:.1f})"
+            f"{args.paths[0]} is about {mean_elo:.1f} ELO stronger than {args.paths[1]} "
+            f"(between {elo_lower:.1f} and {elo_upper:.1f})."
         )
 
     else:
