@@ -157,7 +157,7 @@ def calc_args(dice_per_player: List[int], sides: int, variant: str) -> Tuple[int
 
     # Public state = [History of player 1, History of player 2, ..., is player 1 turn?, is player 2 turn?, ...]
     # so the shape = 1 x (N_ACTIONS * n_players + n_players)
-    # Private state = [Hand of player, 1 hot encoding of who's private hand]
+    # Private state = [Hand of player (1-hot), 1 hot encoding of who's private hand]
     # so the shape = 1 x (sides * n_dice + n_players)
 
     n_players = len(dice_per_player)
@@ -231,18 +231,20 @@ class Game:
         """Prints the state."""
 
         print("History of calls")
+        game_over = False
         for p in range(self.n_players):
             print("Player", p)
             for i in range(self.N_ACTIONS):
                 if state[self.D_PUB_PER_PLAYER * p + i] == 1:
                     if i == self.LIE_ACTION:
                         print("LIE")
+                        game_over = True
                     else:
                         n, d = divmod(i, self.SIDES)
-                        print(n+1, d+1)
+                        print(n+1, str(d+1) + "s" if n > 0 else "")
 
-        print("\nCurrent player")
-        print(self.get_cur_player_pub(state))
+        if not game_over:
+            print(f"\nCurrent player: {self.get_cur_player_pub(state)}")
 
     def make_regrets(self, priv: torch.Tensor, state: torch.Tensor, last_call: int) -> List[torch.Tensor]:
         """Calculates the regrets.
@@ -356,15 +358,14 @@ class Game:
         priv = torch.zeros(self.D_PRI)
         priv[self.PRI_INDEX + player] = 1
 
-        # New method inspired by Chinese poker paper.
+        # New method inspired by Chinese poker paper to encode roll.
+        # 1-hot encoding w/ number of dice. Example: if 2 dice, then
+        # first 2 indices are for dice w/ 1 side. 
         cnt = Counter(roll)
         for face, c in cnt.items():
             for i in range(c):
                 priv[(face - 1) * max(self.dice_per_player) + i] = 1
-        
-        # Old encoding.
-        # for i, r in enumerate(roll):
-        #     priv[i * self.SIDES + r - 1] = 1
+
         return priv
 
     def make_init_state(self) -> torch.Tensor:
@@ -385,6 +386,8 @@ class Game:
         """Get a list of calls made so far."""
 
         # Merge the calls of all players.
+        # (Since the same call can't be made twice, summing across player histories
+        # just gets a full history of the game).
         merged = sum([
             state[self.D_PUB_PER_PLAYER * i: self.D_PUB_PER_PLAYER * (i + 1)]  for i in range(self.n_players)
         ])
