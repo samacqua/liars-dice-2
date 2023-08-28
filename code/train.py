@@ -84,13 +84,15 @@ def play(rolls: Tuple[Tuple, ...], replay_buffer: List[Tuple[torch.Tensor, torch
         # Round ends when someone calls a lie.
         if calls and calls[-1] == game.LIE_ACTION:
 
-            # The loser is the player who called the lie if there are enough die otherwise it is the person who lied.
+            # The loser is the player who called the lie if there are enough die (the person who made the last move),
+            # otherwise it is the person who lied (the person who moved 2 turns ago).
             prev_call = calls[-2] if len(calls) >= 2 else -1
-            if game.evaluate_call(rolls, prev_call):
-                loser = cur
-            else:
+            if game.evaluate_call(rolls, prev_call):    # The call was not a lie.
                 loser = (cur - 1) % len(rolls)
+            else:
+                loser = (cur - 2) % len(rolls)
 
+        # If the game isn't over, recurse by sampling an action and applying it.
         else:
             last_call = calls[-1] if calls else -1
             action = game.sample_action(priv_states[cur], pub_state, last_call, args.eps)
@@ -109,6 +111,14 @@ def play(rolls: Tuple[Tuple, ...], replay_buffer: List[Tuple[torch.Tensor, torch
     with torch.no_grad():
         pub_state = game.make_init_state().to(device)
         play_inner(pub_state)
+        
+        # # Print the game.
+        # print(rolls)
+        # for s in replay_buffer:
+        #     print("player:", game.get_cur_player_priv(s[0]))
+        #     game.print_pub_state(s[1])
+        #     print("won?", s[2])
+        #     print()
 
 
 def print_strategy(state: torch.Tensor) -> None:
